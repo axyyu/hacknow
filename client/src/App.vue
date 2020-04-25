@@ -1,19 +1,46 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <HomePage v-if="isHomePage" v-on:change-page="switchPage" />
+    <QuestionsPage v-if="isQuestionsPage" />
+    <LoadingPage v-if="isLoadingPage" />
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import HomePage from './components/HomePage.vue';
+import QuestionsPage from './components/QuestionsPage.vue';
+import LoadingPage from './components/LoadingPage.vue';
 
 export default {
   name: 'App',
   components: {
-    HelloWorld
-  }
-}
+    HomePage,
+    QuestionsPage,
+    LoadingPage,
+  },
+  data() {
+    return {
+      currentPage: 'home',
+    };
+  },
+  computed: {
+    isHomePage() {
+      return this.currentPage == 'home';
+    },
+    isQuestionsPage() {
+      return this.currentPage == 'questions';
+    },
+    isLoadingPage() {
+      return this.currentPage == 'loading';
+    },
+  },
+  methods: {
+    switchPage(page) {
+      console.log(page);
+      this.currentPage = page;
+    },
+  },
+};
 </script>
 
 <style>
@@ -23,6 +50,9 @@ export default {
   -moz-osx-font-smoothing: grayscale;
   text-align: center;
   color: #2c3e50;
-  margin-top: 60px;
+}
+.page {
+  height: 100vh;
+  width: 100vw;
 }
 </style>
