@@ -1,15 +1,16 @@
 <template>
   <div id="home" class="page">
-    <div class="left-panel">
-      <img alt="talk:now logo" src="../assets/bear.png" />
-    </div>
+    <div class="left-panel"></div>
     <div class="right-panel">
-      <h1>talk:<span class="logo-style">now</span></h1>
+      <h1>
+        talk:
+        <span class="logo-style">now</span>
+      </h1>
 
       <div class="go">
-        <input v-model="name" placeholder="first name" />
+        <input placeholder="first name" v-model="name" v-on:change="storeName" />
         <button v-on:click="$emit('change-page', 'questions')">
-          go!
+          <i class="fal fa-long-arrow-right"></i>
         </button>
       </div>
     </div>
@@ -18,7 +19,17 @@
 
 <script>
 export default {
-  name: 'HomePage',
+  name: "HomePage",
+  data() {
+    return {
+      name: null
+    };
+  },
+  methods: {
+    storeName() {
+      this.$parent.storeName(this.name);
+    }
+  }
 };
 </script>
 
@@ -53,24 +64,28 @@ export default {
   flex-direction: row;
   margin-top: 15px;
   height: 48px;
+  box-shadow: 4px 4px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
 }
 
 .go input {
   font-size: 1em;
   outline: none;
-  border: none;
-  padding: 8px;
-  background: grey;
+  border: 2px solid pink;
+  padding: 8px 16px;
   padding-right: 0;
-  border-radius: 36px 0px 0px 36px;
+  width: 200px;
+  border-radius: 8 0px 0px 8;
 }
 .go button {
   background: pink;
   border: none;
   outline: none;
   font-size: 1em;
+  padding: 0;
   text-align: center;
   width: 48px;
-  border-radius: 0px 36px 36px 0px;
+  border-radius: 0px 8px 8px 0px;
+  cursor: pointer;
 }
 </style>

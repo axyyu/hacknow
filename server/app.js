@@ -5,7 +5,27 @@
 var express = require('express');
 var app = express();
 var path = require('path');
+var cors = require('cors');
 // var hbs = require('hbs');
+
+var corsOptions = {
+  origin: 'http://localhost:8080',
+  optionsSuccessStatus: 200, // some legacy browsers (IE11, various SmartTVs) choke on 204
+};
+
+// MongoDB Atlas
+const MongoClient = require('mongodb').MongoClient;
+const BodyParser = require('body-parser');
+const ObjectId = require('mongodb').ObjectID;
+const CONNECTION_URL =
+  'mongodb+srv://admin:admin@cluster0-9a9uk.gcp.mongodb.net/test?retryWrites=true&w=majority';
+const DATABASE_NAME = 'users';
+
+
+app.use(BodyParser.urlencoded({ extended: true }));
+app.use(BodyParser.json());
+
+var database, collection;
 
 // --------------------------------- //
 // Initial Express and Port
@@ -31,10 +51,83 @@ app.get('/peerfunctions.js', function (req, res) {
   res.sendFile(__dirname + '/peerfunctions.js');
 });
 
+// Databasing
+app.post('/user', cors(corsOptions), (request, response) => {
+  // request.body = JSON.parse(request.body.keys[0]);
+  console.log(request.body);
+  console.log(request.rawBody);
+  collection.insert(request.body, (error, result) => {
+    if (error) {
+      return response.status(500).send(error);
+    }
+    response.send(result.result);
+  });
+});
+app.get('/users', (request, response) => {
+  collection.find({}).toArray((error, result) => {
+    if (error) {
+      return response.status(500).send(error);
+    }
+    response.send(result);
+  });
+});
+
+app.get('/user/:name', (request, response) => {
+  collection.findOne({ name: request.params.name }, (error, result) => {
+    if (error) {
+      return response.status(500).send(error);
+    }
+    response.send(result);
+  });
+});
+
+app.get('/user/:id', (request, response) => {
+  collection.findOne(
+    { _id: new ObjectId(request.params.id) },
+    (error, result) => {
+      if (error) {
+        return response.status(500).send(error);
+      }
+      response.send(result);
+    }
+  );
+});
+
+app.post('/match', cors(corsOptions), async function (request, response) {
+  console.log(request.body);
+  console.log(request.rawBody);
+  let user_name = request.body.name
+  let user_problems = request.body.problem;
+
+  console.log(user_name, user_problems);
+  // let user = await collection.findOne({ name: request.params.name });
+  // user_problems = user['problems'];
+
+  let similarUsers = await collection.findOne({
+    problems: user_problems,
+    name: { $ne: user_name},
+  });
+
+  console.log(similarUsers);
+  response.send(similarUsers);
+});
+
 // -------------------------------------- //
 // Listener to keep the website "alive"
 var listener = app.listen(app.get('port'), function () {
   console.log('Express server started on port: ' + listener.address().port);
+  MongoClient.connect(
+    CONNECTION_URL,
+    { useNewUrlParser: true },
+    (error, client) => {
+      if (error) {
+        throw error;
+      }
+      database = client.db(DATABASE_NAME);
+      collection = database.collection('testUser');
+      console.log('Connected to ' + DATABASE_NAME + '!');
+    }
+  );
 });
 
 app.use(

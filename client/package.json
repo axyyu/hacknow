@@ -7,9 +7,10 @@
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint"
   },
+  "proxy": "http://localhost:8000",
   "dependencies": {
     "core-js": "^3.6.4",
-    "peer": "^0.5.2",
+    "peerjs": "^1.2.0",
     "vue": "^2.6.11",
     "vuex": "^3.3.0"
   },
