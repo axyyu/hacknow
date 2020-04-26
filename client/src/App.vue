@@ -70,6 +70,9 @@ export default {
     setCall(call) {
       this.call = call;
     },
+    setPeerId(id) {
+      this.peerId = id;
+    },
     switchPage(page) {
       console.log(page);
       this.currentPage = page;
@@ -91,49 +94,54 @@ export default {
       console.log("feeling: ", id);
     },
     initializePeer(callback) {
-      if (!this.peer) {
-        this.peer = new Peer("", {
+      var self = this;
+      if (!self.peer) {
+        self.peer = new Peer("", {
           host: location.hostname,
           port: 8000 || (location.protocol === "https:" ? 443 : 80),
-          path: "/peerjs",
-          debug: 3
+          path: "/peerjs"
         });
-        this.peer.on("open", function(id) {
-          this.peerId = id;
+        self.peer.on("open", function(id) {
+          console.log("MY ID", id);
+          self.peerId = id;
           callback(id);
         });
-        this.peer.on("error", function(err) {
+        self.peer.on("error", function(err) {
           alert("" + err);
         });
       }
     },
     initializeConn() {
-      this.conn.on("data", function(data) {
-        console.log(data); // chat messages
-      });
-      this.conn.on("close", function() {});
+      var self = this;
+      self.conn.on("close", function() {});
     },
     startCall() {
-      this.peer.on("connection", function(c) {
-        if (this.conn) {
+      var self = this;
+      self.peer.on("connection", function(c) {
+        if (self.conn) {
+          console.log("closing connection");
           c.close();
           return;
         }
-        this.conn = c;
-        this.friendId = c.peer;
-        this.initializeConn();
+        console.log("making connection");
+        self.conn = c;
+        self.friendId = c.peer;
+        self.initializeConn();
 
-        this.switchPage('chat');
+        self.switchPage("chat");
       });
     },
-    joinCall(destId) {
-      this.conn = this.peer.connect(destId, {
+    joinCall(destId, callback) {
+      var self = this;
+      self.conn = self.peer.connect(destId, {
         reliable: true
       });
-      this.friendId = destId;
-      this.conn.on("open", function() {
-        this.initializeConn();
-        this.call = this.peer.call(this.friendId, window.localStream);
+      self.friendId = destId;
+      self.conn.on("open", function() {
+        console.log("CONNECTION MADE FROM GUEST", callback);
+        self.initializeConn();
+        self.call = self.peer.call(self.friendId, window.localStream);
+        self.call.on("stream", callback);
       });
     }
   }

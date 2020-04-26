@@ -94,21 +94,27 @@ app.get('/user/:id', (request, response) => {
 });
 
 app.post('/match', cors(corsOptions), async function (request, response) {
-  console.log(request.body);
-  console.log(request.rawBody);
+  console.log("Request body: ", request.body);
+  // console.log(request.rawBody);
   let user_name = request.body.name
   let user_problems = request.body.problem;
 
-  console.log(user_name, user_problems);
+  console.log("Name: ", user_name, ", problem: ", user_problems);
   // let user = await collection.findOne({ name: request.params.name });
   // user_problems = user['problems'];
 
   let similarUsers = await collection.findOne({
-    problems: user_problems,
+    problem: user_problems,
     name: { $ne: user_name},
   });
 
-  console.log(similarUsers);
+  if (similarUsers != null) {
+    console.log("Similar user's name: ", similarUsers.name);
+    let deletedUser = await collection.deleteOne({name: similarUsers.name})
+    console.log("Deleted user's name: ", deletedUser.name);
+  }
+
+  console.log("Similar Users: ", similarUsers);
   response.send(similarUsers);
 });
 

@@ -20,41 +20,62 @@ export default {
         peerId: userId
       };
 
-      const response = await fetch('match', {
-        method: 'POST',
+      const response = await fetch("match", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json'
+          "Content-Type": "application/json"
         },
         body: JSON.stringify(payload)
       });
-      try{
+      try {
         // found match - join call
         const match = await response.json();
-        if(match == null) throw Error;
+        if (match == null) throw Error;
 
-        console.log('found match!');
+        console.log("found match!");
 
         this.$parent.setMatch(match);
-        this.$parent.switchPage('chat');
-      }
-      catch(err) {
+        this.$parent.switchPage("chat");
+      } catch (err) {
         // no match - start server
         console.log(err);
-        console.log('did not find match!');
+        console.log("did not find match!");
         this.$parent.startCall();
 
-        console.log(payload);
-        await fetch('user', {
-          method: 'POST',
+        await fetch("user", {
+          method: "POST",
           headers: {
-            'Content-Type': 'application/json'
+            "Content-Type": "application/json"
           },
           body: JSON.stringify(payload)
         });
       }
     },
+    requestLocalVideo(callback) {
+      navigator.getUserMedia =
+        navigator.getUserMedia ||
+        navigator.webkitGetUserMedia ||
+        navigator.mozGetUserMedia;
+
+      // Request audio and video
+      navigator.getUserMedia(
+        { audio: true, video: true },
+        function(stream) {
+          window.localStream = stream;
+          console.log("WINDOW LOCAL", window.localStream);
+          callback();
+        },
+        function(err) {
+          alert("Cannot get access to your camera and video !");
+          console.error(err);
+        }
+      );
+    },
     init() {
-      this.$parent.initializePeer(this.makeMatch);
+      var self = this;
+      self.requestLocalVideo(() => {
+        self.$parent.initializePeer(self.makeMatch);
+      });
     }
   },
   mounted() {

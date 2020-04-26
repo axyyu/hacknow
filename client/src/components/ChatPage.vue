@@ -3,11 +3,18 @@
     <div class="chat-video-container">
       <div class="video-container">
         <div class="person-info"></div>
-        <div id="video" class="person-video" :srcObject="friendStream" ></div>
+        <video id="video" class="person-video" autoplay="autoplay"></video>
       </div>
       <div class="chat-container">
-        <div id="camera" class="camera-view" :srcObject="myStream"></div>
-        <div class="chat-box"></div>
+        <video id="camera" class="camera-view" autoplay="autoplay"></video>
+        <div class="chat-box">
+          <form v-on:submit.prevent="sendChat">
+            <input v-model="message" />
+          </form>
+          <div class="message" v-for="item in chat" :key="item.message">
+            <span :class="item.me ? 'me' : 'notme'">{{item.message}}</span>
+          </div>
+        </div>
       </div>
     </div>
     <div class="button-container">
@@ -19,7 +26,7 @@
         <i v-if="showVideo" class="fas fa-video"></i>
         <i v-if="!showVideo" class="fas fa-video-slash"></i>
       </button>
-      <button v-on:click="$emit('change-page', 'reflections')">
+      <button v-on:click="endCall">
         <i class="fas fa-phone-slash"></i>
       </button>
     </div>
@@ -28,62 +35,103 @@
 
 <script>
 export default {
-  name: 'ChatPage',
+  name: "ChatPage",
   data() {
     return {
       muteMic: false,
       showVideo: true,
-      myStream: null,
-      friendStream: null
+      chat: [],
+      chatInit: false,
+      message: ""
     };
   },
   methods: {
-    requestLocalVideo(callback) {
-      navigator.getUserMedia =
-        navigator.getUserMedia ||
-        navigator.webkitGetUserMedia ||
-        navigator.mozGetUserMedia;
+    sendChat() {
+      console.log(this.message);
+      const data = {
+        me: true,
+        message: this.message
+      };
+      this.$parent.conn.send(data);
+      this.chat = [...this.chat, data];
+      this.message = "";
+    },
+    endCall() {
+      this.$parent.call.close();
+      this.$parent.conn.close();
+      this.$emit("change-page", "reflections");
+    },
+    stopStreamedVideo(videoElem) {
+      const stream = videoElem.srcObject;
+      const tracks = stream.getTracks();
 
-      // Request audio and video
-      navigator.getUserMedia(
-        { audio: true, video: true },
-        function(stream) {
-          window.localStream = stream;
-          callback(stream);
-        },
-        function(err) {
-          alert("Cannot get access to your camera and video !");
-          console.error(err);
-        }
-      );
+      tracks.forEach(function(track) {
+        track.stop();
+      });
+
+      videoElem.srcObject = null;
     },
+    // requestLocalVideo(callback) {
+    //   navigator.getUserMedia =
+    //     navigator.getUserMedia ||
+    //     navigator.webkitGetUserMedia ||
+    //     navigator.mozGetUserMedia;
+
+    //   // Request audio and video
+    //   navigator.getUserMedia(
+    //     { audio: true, video: true },
+    //     function(stream) {
+    //       window.localStream = stream;
+    //       console.log("WINDOW LOCAL", window.localStream);
+    //       callback(stream);
+    //     },
+    //     function(err) {
+    //       alert("Cannot get access to your camera and video !");
+    //       console.error(err);
+    //     }
+    //   );
+    // },
     init() {
-      this.$parent.peer.on("call", function(call) {
-          this.$parent.setCall(call);
-          this.answerCall();
+      console.log("IM GUEST", this.$parent.conn == null);
+      var self = this;
+
+      if (this.$parent.conn != null) {
+        self.$parent.peer.on("call", function(call) {
+          self.$parent.setCall(call);
+          self.answerCall();
         });
-      this.requestLocalVideo(this.launchCall);
+      } // host
+
+      // self.requestLocalVideo(self.launchCall);
+      self.launchCall();
     },
-    launchCall(stream) {
-      this.myStream = stream;
-      console.log('test', stream);
-      document.getElementById('camera').srcObject = stream;
-      if(this.$parent.conn == null) { // this is not host, join call
-        this.$parent.joinCall(this.$parent.friendId);
+    launchCall() {
+      var self = this;
+      console.log("test", window.localStream);
+      document.getElementById("camera").srcObject = window.localStream;
+      if (self.$parent.conn == null) {
+        // this is not host, join call
+        self.$parent.joinCall(self.$parent.friendId, self.handleJoinCall);
+      }
+    },
+    handleJoinCall(stream) {
+      console.log("SETTING UP STREAM");
+      window.peer_stream = stream;
+      document.getElementById("video").srcObject = stream;
+
+      if (!this.chatInit) {
+        this.$parent.conn.on("data", this.handleChat);
+        this.chatInit = true;
       }
     },
     answerCall() {
-      this.$parent.call.answer(window.localStream);
-      this.$parent.call.on("stream", function(stream) {
-        window.peer_stream = stream;
-        document.getElementById('video').srcObject = stream;
-        this.friendStream = stream;
-        // document.getElementById(element_id).srcObject = stream;
-      });
-      this.$parent.call.on("close", function() {
-        this.$parent.conn.close();
-        this.$parent.peer.close();
-        this.$parent.changePage('reflections');
+      console.log("CALL ANSWERED", window.localStream);
+      var self = this;
+
+      self.$parent.call.answer(window.localStream);
+      self.$parent.call.on("stream", this.handleJoinCall);
+      self.$parent.call.on("close", function() {
+        self.endCall();
         // the call has ended;
         // use call.close() to finish a call
       });
@@ -94,6 +142,11 @@ export default {
     toggleVideo() {
       this.showVideo = !this.showVideo;
     },
+    handleChat(data) {
+      console.log(data);
+      data.me = false;
+      this.chat = [...this.chat, data];
+    }
   },
   mounted() {
     this.init();
@@ -103,6 +156,9 @@ export default {
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
+.me {
+  color: darkgreen;
+}
 #chat {
   display: flex;
   flex-direction: column;
@@ -155,6 +211,7 @@ export default {
   background: pink;
   width: 65vw;
   height: 70vh;
+  object-fit: cover;
 }
 .person-info {
   background: grey;
@@ -172,6 +229,7 @@ export default {
   background: pink;
   width: 100%;
   height: 25vh;
+  object-fit: cover;
 }
 .chat-box {
   background: rgb(187, 186, 186);
